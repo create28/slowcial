@@ -96,6 +96,10 @@
                 <p>or click to browse</p>
                 <input type="file" id="fileInput" accept="image/*" multiple hidden>
             </div>
+            <div class="caption-input-wrapper">
+                <input type="text" id="captionInput" placeholder="Write a caption for these photos..."
+                    class="caption-input">
+            </div>
         </section>
 
         <!-- Photo Grid -->
@@ -115,6 +119,15 @@
             </svg>
             <h3>No photos yet</h3>
             <p>Upload your first photo to get started</p>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" id="lightboxClose">&times;</button>
+        <div class="lightbox-content">
+            <img src="" alt="Full screen photo" id="lightboxImage">
+            <div class="lightbox-caption" id="lightboxCaption"></div>
         </div>
     </div>
 

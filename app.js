@@ -26,7 +26,11 @@ const elements = {
     opacityValue: document.getElementById('opacityValue'),
     colorValue: document.querySelector('.color-value'),
     applyFilter: document.getElementById('applyFilter'),
-    resetFilter: document.getElementById('resetFilter')
+    resetFilter: document.getElementById('resetFilter'),
+    lightbox: document.getElementById('lightbox'),
+    lightboxImage: document.getElementById('lightboxImage'),
+    lightboxCaption: document.getElementById('lightboxCaption'),
+    lightboxClose: document.getElementById('lightboxClose')
 };
 
 // ===================================
@@ -60,6 +64,17 @@ function setupEventListeners() {
     elements.blendMode.addEventListener('change', handleBlendModeChange);
     elements.applyFilter.addEventListener('click', applyFilterToAll);
     elements.resetFilter.addEventListener('click', resetFilter);
+
+    // Lightbox
+    elements.lightboxClose.addEventListener('click', closeLightbox);
+    elements.lightbox.addEventListener('click', (e) => {
+        if (e.target === elements.lightbox) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.lightbox.classList.contains('active')) {
+            closeLightbox();
+        }
+    });
 
     // Prevent default drag behavior on document
     document.addEventListener('dragover', (e) => e.preventDefault());
@@ -100,10 +115,11 @@ function handleDrop(e) {
 
 async function processFiles(files) {
     elements.uploadZone.classList.add('uploading');
+    const caption = document.getElementById('captionInput').value;
 
     for (const file of files) {
         try {
-            await uploadPhoto(file);
+            await uploadPhoto(file, caption);
         } catch (error) {
             console.error('Error uploading file:', error);
             showNotification('Failed to upload ' + file.name);
@@ -111,27 +127,31 @@ async function processFiles(files) {
     }
 
     elements.uploadZone.classList.remove('uploading');
+    document.getElementById('captionInput').value = ''; // Reset caption
     await fetchPhotos();
 }
 
-async function uploadPhoto(file) {
-    // 1. Upload image to Supabase Storage
+async function uploadPhoto(file, caption) {
+    // 1. Compress image if needed
+    const compressedFile = await compressImage(file);
+
+    // 2. Upload image to Supabase Storage
     const fileName = `${Date.now()}-${file.name}`;
     const { data: storageData, error: storageError } = await supabase.storage
         .from('photos')
-        .upload(fileName, file);
+        .upload(fileName, compressedFile);
 
     if (storageError) throw storageError;
 
-    // 2. Get public URL
+    // 3. Get public URL
     const { data: { publicUrl } } = supabase.storage
         .from('photos')
         .getPublicUrl(fileName);
 
-    // 3. Get image dimensions
-    const dimensions = await getImageDimensions(file);
+    // 4. Get image dimensions
+    const dimensions = await getImageDimensions(compressedFile);
 
-    // 4. Insert record into Database
+    // 5. Insert record into Database
     const { error: dbError } = await supabase
         .from('photos')
         .insert({
@@ -139,12 +159,59 @@ async function uploadPhoto(file) {
             width: dimensions.width,
             height: dimensions.height,
             aspect_ratio: dimensions.width / dimensions.height,
-            filter_settings: state.filterSettings
+            filter_settings: state.filterSettings,
+            caption: caption || null
         });
 
     if (dbError) throw dbError;
 
     showNotification('Photo uploaded successfully');
+}
+
+async function compressImage(file) {
+    // If file is already small enough, return it
+    if (file.size <= 500 * 1024) return file;
+
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            // Max dimension constraint (optional, but good for very large images)
+            const MAX_DIMENSION = 2048;
+            if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                if (width > height) {
+                    height = Math.round((height * MAX_DIMENSION) / width);
+                    width = MAX_DIMENSION;
+                } else {
+                    width = Math.round((width * MAX_DIMENSION) / height);
+                    height = MAX_DIMENSION;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Recursive compression loop
+            const attemptCompression = (quality) => {
+                canvas.toBlob((blob) => {
+                    if (blob.size <= 500 * 1024 || quality <= 0.1) {
+                        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                    } else {
+                        attemptCompression(quality - 0.1);
+                    }
+                }, 'image/jpeg', quality);
+            };
+
+            attemptCompression(0.9);
+        };
+        img.src = URL.createObjectURL(file);
+    });
 }
 
 function getImageDimensions(file) {
@@ -188,6 +255,33 @@ function renderGrid() {
     });
 }
 
+// ===================================
+// DOM Elements (Updated)
+// ===================================
+// ... previous elements ...
+const elements = {
+    uploadZone: document.getElementById('uploadZone'),
+    fileInput: document.getElementById('fileInput'),
+    photoGrid: document.getElementById('photoGrid'),
+    emptyState: document.getElementById('emptyState'),
+    filterToggle: document.getElementById('filterToggle'),
+    filterPanel: document.getElementById('filterPanel'),
+    filterColor: document.getElementById('filterColor'),
+    filterOpacity: document.getElementById('filterOpacity'),
+    blendMode: document.getElementById('blendMode'),
+    applyFilter: document.getElementById('applyFilter'),
+    resetFilter: document.getElementById('resetFilter'),
+    opacityValue: document.getElementById('opacityValue'),
+    colorValue: document.getElementById('colorValue'),
+    lightbox: document.getElementById('lightbox'),
+    lightboxImage: document.getElementById('lightboxImage'),
+    lightboxCaption: document.getElementById('lightboxCaption'),
+    lightboxClose: document.getElementById('lightboxClose')
+};
+
+// ===================================
+// Event Listeners (Updated)
+// ===================================
 function createGridItem(photo) {
     const item = document.createElement('div');
     item.className = 'grid-item';
@@ -202,7 +296,7 @@ function createGridItem(photo) {
     // Create image
     const img = document.createElement('img');
     img.src = photo.url;
-    img.alt = 'Photo';
+    img.alt = photo.caption || 'Photo';
     img.loading = 'lazy';
 
     // Create filter overlay
@@ -210,6 +304,14 @@ function createGridItem(photo) {
     filter.className = 'item-filter';
     // Use global filter settings for now, or photo.filter_settings if we wanted per-photo
     updateFilterStyle(filter, state.filterSettings);
+
+    // Create caption overlay (if caption exists)
+    if (photo.caption) {
+        const caption = document.createElement('div');
+        caption.className = 'grid-caption';
+        caption.textContent = photo.caption;
+        item.appendChild(caption);
+    }
 
     // Create overlay with actions
     const overlay = document.createElement('div');
@@ -238,7 +340,38 @@ function createGridItem(photo) {
     item.appendChild(filter);
     item.appendChild(overlay);
 
+    // Open lightbox on click
+    item.addEventListener('click', () => openLightbox(photo));
+
     return item;
+}
+
+// ===================================
+// Lightbox Logic
+// ===================================
+function openLightbox(photo) {
+    elements.lightboxImage.src = photo.url;
+    elements.lightboxCaption.textContent = photo.caption || '';
+
+    // Apply current filter to lightbox image too
+    updateFilterStyle(elements.lightboxImage, state.filterSettings);
+    // Note: mix-blend-mode on img tag might interact with background differently,
+    // but for simplicity we apply the same style logic or just the filter overlay.
+    // Actually, applying filter to the img directly with mix-blend-mode might not work as expected
+    // without a container background. Let's keep it simple: show raw image or apply filter via a wrapper?
+    // The user requirement didn't specify filters on lightbox, but it makes sense.
+    // For now, let's just show the image. If we want filters, we need a wrapper div in lightbox similar to grid item.
+
+    elements.lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent scrolling
+}
+
+function closeLightbox() {
+    elements.lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+        elements.lightboxImage.src = '';
+    }, 300); // Clear after fade out
 }
 
 function getItemSizeClass(aspectRatio) {
@@ -403,4 +536,26 @@ function hexToRgba(hex, alpha) {
 // Initialize App
 // ===================================
 document.addEventListener('DOMContentLoaded', init);
+
+// ===================================
+// Lightbox Logic
+// ===================================
+function openLightbox(photo) {
+    elements.lightboxImage.src = photo.url;
+    elements.lightboxCaption.textContent = photo.caption || '';
+
+    // Apply current filter to lightbox image too
+    updateFilterStyle(elements.lightboxImage, state.filterSettings);
+
+    elements.lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent scrolling
+}
+
+function closeLightbox() {
+    elements.lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+        elements.lightboxImage.src = '';
+    }, 300); // Clear after fade out
+}
 
