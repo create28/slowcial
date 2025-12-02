@@ -255,33 +255,6 @@ function renderGrid() {
     });
 }
 
-// ===================================
-// DOM Elements (Updated)
-// ===================================
-// ... previous elements ...
-const elements = {
-    uploadZone: document.getElementById('uploadZone'),
-    fileInput: document.getElementById('fileInput'),
-    photoGrid: document.getElementById('photoGrid'),
-    emptyState: document.getElementById('emptyState'),
-    filterToggle: document.getElementById('filterToggle'),
-    filterPanel: document.getElementById('filterPanel'),
-    filterColor: document.getElementById('filterColor'),
-    filterOpacity: document.getElementById('filterOpacity'),
-    blendMode: document.getElementById('blendMode'),
-    applyFilter: document.getElementById('applyFilter'),
-    resetFilter: document.getElementById('resetFilter'),
-    opacityValue: document.getElementById('opacityValue'),
-    colorValue: document.getElementById('colorValue'),
-    lightbox: document.getElementById('lightbox'),
-    lightboxImage: document.getElementById('lightboxImage'),
-    lightboxCaption: document.getElementById('lightboxCaption'),
-    lightboxClose: document.getElementById('lightboxClose')
-};
-
-// ===================================
-// Event Listeners (Updated)
-// ===================================
 function createGridItem(photo) {
     const item = document.createElement('div');
     item.className = 'grid-item';
@@ -344,34 +317,6 @@ function createGridItem(photo) {
     item.addEventListener('click', () => openLightbox(photo));
 
     return item;
-}
-
-// ===================================
-// Lightbox Logic
-// ===================================
-function openLightbox(photo) {
-    elements.lightboxImage.src = photo.url;
-    elements.lightboxCaption.textContent = photo.caption || '';
-
-    // Apply current filter to lightbox image too
-    updateFilterStyle(elements.lightboxImage, state.filterSettings);
-    // Note: mix-blend-mode on img tag might interact with background differently,
-    // but for simplicity we apply the same style logic or just the filter overlay.
-    // Actually, applying filter to the img directly with mix-blend-mode might not work as expected
-    // without a container background. Let's keep it simple: show raw image or apply filter via a wrapper?
-    // The user requirement didn't specify filters on lightbox, but it makes sense.
-    // For now, let's just show the image. If we want filters, we need a wrapper div in lightbox similar to grid item.
-
-    elements.lightbox.classList.add('active');
-    document.body.style.overflow = 'hidden'; // Prevent scrolling
-}
-
-function closeLightbox() {
-    elements.lightbox.classList.remove('active');
-    document.body.style.overflow = '';
-    setTimeout(() => {
-        elements.lightboxImage.src = '';
-    }, 300); // Clear after fade out
 }
 
 function getItemSizeClass(aspectRatio) {
@@ -533,11 +478,6 @@ function hexToRgba(hex, alpha) {
 }
 
 // ===================================
-// Initialize App
-// ===================================
-document.addEventListener('DOMContentLoaded', init);
-
-// ===================================
 // Lightbox Logic
 // ===================================
 function openLightbox(photo) {
@@ -559,3 +499,7 @@ function closeLightbox() {
     }, 300); // Clear after fade out
 }
 
+// ===================================
+// Initialize App
+// ===================================
+document.addEventListener('DOMContentLoaded', init);
