@@ -32,11 +32,10 @@ const elements = {
 // ===================================
 // Initialization
 // ===================================
-function init() {
-    loadFromLocalStorage();
+async function init() {
+    loadFilterSettings();
     setupEventListeners();
-    renderGrid();
-    updateEmptyState();
+    await fetchPhotos();
 }
 
 // ===================================
@@ -46,22 +45,22 @@ function setupEventListeners() {
     // Upload zone interactions
     elements.uploadZone.addEventListener('click', () => elements.fileInput.click());
     elements.fileInput.addEventListener('change', handleFileSelect);
-    
+
     // Drag and drop
     elements.uploadZone.addEventListener('dragover', handleDragOver);
     elements.uploadZone.addEventListener('dragleave', handleDragLeave);
     elements.uploadZone.addEventListener('drop', handleDrop);
-    
+
     // Filter panel toggle
     elements.filterToggle.addEventListener('click', toggleFilterPanel);
-    
+
     // Filter controls
     elements.filterColor.addEventListener('input', handleColorChange);
     elements.filterOpacity.addEventListener('input', handleOpacityChange);
     elements.blendMode.addEventListener('change', handleBlendModeChange);
     elements.applyFilter.addEventListener('click', applyFilterToAll);
     elements.resetFilter.addEventListener('click', resetFilter);
-    
+
     // Prevent default drag behavior on document
     document.addEventListener('dragover', (e) => e.preventDefault());
     document.addEventListener('drop', (e) => e.preventDefault());
@@ -89,48 +88,92 @@ function handleDragLeave(e) {
 function handleDrop(e) {
     e.preventDefault();
     elements.uploadZone.classList.remove('drag-over');
-    
-    const files = Array.from(e.dataTransfer.files).filter(file => 
+
+    const files = Array.from(e.dataTransfer.files).filter(file =>
         file.type.startsWith('image/')
     );
-    
+
     if (files.length > 0) {
         processFiles(files);
     }
 }
 
-function processFiles(files) {
+async function processFiles(files) {
     elements.uploadZone.classList.add('uploading');
-    
-    files.forEach(file => {
-        const reader = new FileReader();
-        
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const photo = {
-                    id: Date.now() + Math.random(),
-                    src: e.target.result,
-                    width: img.width,
-                    height: img.height,
-                    aspectRatio: img.width / img.height,
-                    filter: { ...state.filterSettings }
-                };
-                
-                state.photos.push(photo);
-                saveToLocalStorage();
-                renderGrid();
-                updateEmptyState();
-            };
-            img.src = e.target.result;
+
+    for (const file of files) {
+        try {
+            await uploadPhoto(file);
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            showNotification('Failed to upload ' + file.name);
+        }
+    }
+
+    elements.uploadZone.classList.remove('uploading');
+    await fetchPhotos();
+}
+
+async function uploadPhoto(file) {
+    // 1. Upload image to Supabase Storage
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data: storageData, error: storageError } = await supabase.storage
+        .from('photos')
+        .upload(fileName, file);
+
+    if (storageError) throw storageError;
+
+    // 2. Get public URL
+    const { data: { publicUrl } } = supabase.storage
+        .from('photos')
+        .getPublicUrl(fileName);
+
+    // 3. Get image dimensions
+    const dimensions = await getImageDimensions(file);
+
+    // 4. Insert record into Database
+    const { error: dbError } = await supabase
+        .from('photos')
+        .insert({
+            url: publicUrl,
+            width: dimensions.width,
+            height: dimensions.height,
+            aspect_ratio: dimensions.width / dimensions.height,
+            filter_settings: state.filterSettings
+        });
+
+    if (dbError) throw dbError;
+
+    showNotification('Photo uploaded successfully');
+}
+
+function getImageDimensions(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            resolve({ width: img.width, height: img.height });
         };
-        
-        reader.readAsDataURL(file);
+        img.src = URL.createObjectURL(file);
     });
-    
-    setTimeout(() => {
-        elements.uploadZone.classList.remove('uploading');
-    }, 500);
+}
+
+// ===================================
+// Data Fetching
+// ===================================
+async function fetchPhotos() {
+    const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching photos:', error);
+        return;
+    }
+
+    state.photos = data;
+    renderGrid();
+    updateEmptyState();
 }
 
 // ===================================
@@ -138,7 +181,7 @@ function processFiles(files) {
 // ===================================
 function renderGrid() {
     elements.photoGrid.innerHTML = '';
-    
+
     state.photos.forEach(photo => {
         const gridItem = createGridItem(photo);
         elements.photoGrid.appendChild(gridItem);
@@ -149,30 +192,32 @@ function createGridItem(photo) {
     const item = document.createElement('div');
     item.className = 'grid-item';
     item.dataset.id = photo.id;
-    
+
     // Determine size class based on aspect ratio
-    const sizeClass = getItemSizeClass(photo.aspectRatio);
+    const sizeClass = getItemSizeClass(photo.aspect_ratio);
     if (sizeClass) {
         item.classList.add(sizeClass);
     }
-    
+
     // Create image
     const img = document.createElement('img');
-    img.src = photo.src;
+    img.src = photo.url;
     img.alt = 'Photo';
-    
+    img.loading = 'lazy';
+
     // Create filter overlay
     const filter = document.createElement('div');
     filter.className = 'item-filter';
-    updateFilterStyle(filter, photo.filter);
-    
+    // Use global filter settings for now, or photo.filter_settings if we wanted per-photo
+    updateFilterStyle(filter, state.filterSettings);
+
     // Create overlay with actions
     const overlay = document.createElement('div');
     overlay.className = 'item-overlay';
-    
+
     const actions = document.createElement('div');
     actions.className = 'item-actions';
-    
+
     // Delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.innerHTML = `
@@ -183,29 +228,22 @@ function createGridItem(photo) {
     deleteBtn.title = 'Delete photo';
     deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        deletePhoto(photo.id);
+        deletePhoto(photo);
     });
-    
+
     actions.appendChild(deleteBtn);
     overlay.appendChild(actions);
-    
+
     item.appendChild(img);
     item.appendChild(filter);
     item.appendChild(overlay);
-    
+
     return item;
 }
 
 function getItemSizeClass(aspectRatio) {
-    // Wide photos (landscape): aspect ratio > 1.5
-    if (aspectRatio > 1.5) {
-        return 'wide';
-    }
-    // Tall photos (portrait): aspect ratio < 0.7
-    else if (aspectRatio < 0.7) {
-        return 'tall';
-    }
-    // Square-ish photos: no special class
+    if (aspectRatio > 1.5) return 'wide';
+    if (aspectRatio < 0.7) return 'tall';
     return '';
 }
 
@@ -237,12 +275,10 @@ function handleBlendModeChange(e) {
 }
 
 function applyFilterToAll() {
-    state.photos.forEach(photo => {
-        photo.filter = { ...state.filterSettings };
-    });
-    
-    saveToLocalStorage();
+    // For now, we just update the visual state and save to local storage as "user preference"
+    // In a more complex app, we might update all rows in the DB
     renderGrid();
+    saveFilterSettings();
     showNotification('Filter applied to all photos');
 }
 
@@ -252,25 +288,51 @@ function resetFilter() {
         opacity: 30,
         blendMode: 'multiply'
     };
-    
+
+    updateFilterControls();
+    saveFilterSettings();
+    renderGrid();
+    showNotification('Filter reset to default');
+}
+
+function updateFilterControls() {
     elements.filterColor.value = state.filterSettings.color;
     elements.filterOpacity.value = state.filterSettings.opacity;
     elements.blendMode.value = state.filterSettings.blendMode;
     elements.opacityValue.textContent = `${state.filterSettings.opacity}%`;
     elements.colorValue.textContent = state.filterSettings.color;
-    
-    showNotification('Filter reset to default');
 }
 
 // ===================================
 // Photo Management
 // ===================================
-function deletePhoto(id) {
-    state.photos = state.photos.filter(photo => photo.id !== id);
-    saveToLocalStorage();
-    renderGrid();
-    updateEmptyState();
-    showNotification('Photo deleted');
+async function deletePhoto(photo) {
+    if (!confirm('Are you sure you want to delete this photo?')) return;
+
+    try {
+        // 1. Delete from Storage
+        // Extract filename from URL
+        const fileName = photo.url.split('/').pop();
+        const { error: storageError } = await supabase.storage
+            .from('photos')
+            .remove([fileName]);
+
+        if (storageError) console.error('Storage delete error:', storageError);
+
+        // 2. Delete from Database
+        const { error: dbError } = await supabase
+            .from('photos')
+            .delete()
+            .eq('id', photo.id);
+
+        if (dbError) throw dbError;
+
+        showNotification('Photo deleted');
+        await fetchPhotos();
+    } catch (error) {
+        console.error('Error deleting photo:', error);
+        showNotification('Failed to delete photo');
+    }
 }
 
 // ===================================
@@ -287,7 +349,6 @@ function updateEmptyState() {
 }
 
 function showNotification(message) {
-    // Create notification element
     const notification = document.createElement('div');
     notification.textContent = message;
     notification.style.cssText = `
@@ -304,73 +365,27 @@ function showNotification(message) {
         z-index: 1000;
         animation: slideIn 0.3s ease-out;
     `;
-    
+
     document.body.appendChild(notification);
-    
-    // Remove after 3 seconds
+
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
-// Add notification animations to CSS dynamically
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
-
 // ===================================
-// Local Storage
+// Local Storage (Filters only)
 // ===================================
-function saveToLocalStorage() {
-    try {
-        localStorage.setItem('friendsta-photos', JSON.stringify(state.photos));
-        localStorage.setItem('friendsta-filter', JSON.stringify(state.filterSettings));
-    } catch (e) {
-        console.error('Failed to save to localStorage:', e);
-    }
+function saveFilterSettings() {
+    localStorage.setItem('friendsta-filter', JSON.stringify(state.filterSettings));
 }
 
-function loadFromLocalStorage() {
-    try {
-        const photos = localStorage.getItem('friendsta-photos');
-        const filter = localStorage.getItem('friendsta-filter');
-        
-        if (photos) {
-            state.photos = JSON.parse(photos);
-        }
-        
-        if (filter) {
-            state.filterSettings = JSON.parse(filter);
-            elements.filterColor.value = state.filterSettings.color;
-            elements.filterOpacity.value = state.filterSettings.opacity;
-            elements.blendMode.value = state.filterSettings.blendMode;
-            elements.opacityValue.textContent = `${state.filterSettings.opacity}%`;
-            elements.colorValue.textContent = state.filterSettings.color;
-        }
-    } catch (e) {
-        console.error('Failed to load from localStorage:', e);
+function loadFilterSettings() {
+    const filter = localStorage.getItem('friendsta-filter');
+    if (filter) {
+        state.filterSettings = JSON.parse(filter);
+        updateFilterControls();
     }
 }
 
@@ -388,3 +403,4 @@ function hexToRgba(hex, alpha) {
 // Initialize App
 // ===================================
 document.addEventListener('DOMContentLoaded', init);
+
