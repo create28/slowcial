@@ -513,8 +513,9 @@ function openLightbox(photo) {
     elements.lightboxImage.src = photo.url;
     elements.lightboxCaption.textContent = photo.caption || '';
 
-    // Apply current filter to lightbox image too
-    updateFilterStyle(elements.lightboxImage, state.filterSettings);
+    // Ensure no filter styles are applied to the lightbox image
+    elements.lightboxImage.style.backgroundColor = '';
+    elements.lightboxImage.style.mixBlendMode = '';
 
     elements.lightbox.classList.add('active');
     document.body.style.overflow = 'hidden'; // Prevent scrolling
