@@ -558,9 +558,15 @@ async function savePhotoDetails() {
 
         if (error) throw error;
 
+        // Update the local state immediately
+        const photoIndex = state.photos.findIndex(p => p.id === photoId);
+        if (photoIndex !== -1) {
+            state.photos[photoIndex].caption = newCaption || null;
+        }
+
         showNotification('Changes saved');
         closeEditModal();
-        await fetchPhotos(); // Refresh grid
+        renderGrid(); // Re-render to show updated caption
     } catch (error) {
         console.error('Error saving details:', error);
         if (error.code === 'PGRST204') {
