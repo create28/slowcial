@@ -96,10 +96,6 @@
                 <p>or click to browse</p>
                 <input type="file" id="fileInput" accept="image/*" multiple hidden>
             </div>
-            <div class="caption-input-wrapper">
-                <input type="text" id="captionInput" placeholder="Write a caption for these photos..."
-                    class="caption-input">
-            </div>
         </section>
 
         <!-- Photo Grid -->
@@ -128,6 +124,26 @@
         <div class="lightbox-content">
             <img src="" alt="Full screen photo" id="lightboxImage">
             <div class="lightbox-caption" id="lightboxCaption"></div>
+        </div>
+    </div>
+
+    <!-- Edit Photo Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Photo Details</h3>
+                <button class="modal-close" id="editModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editCaptionInput">Caption</label>
+                    <textarea id="editCaptionInput" rows="3" placeholder="Write a caption..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveEditBtn">Save Changes</button>
+            </div>
         </div>
     </div>
 

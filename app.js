@@ -3,6 +3,7 @@
 // ===================================
 const state = {
     photos: [],
+    currentEditingPhoto: null,
     filterSettings: {
         color: '#667eea',
         opacity: 30,
@@ -30,7 +31,13 @@ const elements = {
     lightbox: document.getElementById('lightbox'),
     lightboxImage: document.getElementById('lightboxImage'),
     lightboxCaption: document.getElementById('lightboxCaption'),
-    lightboxClose: document.getElementById('lightboxClose')
+    lightboxClose: document.getElementById('lightboxClose'),
+    // Edit Modal
+    editModal: document.getElementById('editModal'),
+    editModalClose: document.getElementById('editModalClose'),
+    editCaptionInput: document.getElementById('editCaptionInput'),
+    cancelEditBtn: document.getElementById('cancelEditBtn'),
+    saveEditBtn: document.getElementById('saveEditBtn')
 };
 
 // ===================================
@@ -71,9 +78,18 @@ function setupEventListeners() {
         if (e.target === elements.lightbox) closeLightbox();
     });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && elements.lightbox.classList.contains('active')) {
-            closeLightbox();
+        if (e.key === 'Escape') {
+            if (elements.lightbox.classList.contains('active')) closeLightbox();
+            if (elements.editModal.classList.contains('active')) closeEditModal();
         }
+    });
+
+    // Edit Modal
+    elements.editModalClose.addEventListener('click', closeEditModal);
+    elements.cancelEditBtn.addEventListener('click', closeEditModal);
+    elements.saveEditBtn.addEventListener('click', savePhotoDetails);
+    elements.editModal.addEventListener('click', (e) => {
+        if (e.target === elements.editModal) closeEditModal();
     });
 
     // Prevent default drag behavior on document
@@ -115,11 +131,10 @@ function handleDrop(e) {
 
 async function processFiles(files) {
     elements.uploadZone.classList.add('uploading');
-    const caption = document.getElementById('captionInput').value;
 
     for (const file of files) {
         try {
-            await uploadPhoto(file, caption);
+            await uploadPhoto(file);
         } catch (error) {
             console.error('Error uploading file:', error);
             showNotification('Failed to upload ' + file.name);
@@ -127,11 +142,10 @@ async function processFiles(files) {
     }
 
     elements.uploadZone.classList.remove('uploading');
-    document.getElementById('captionInput').value = ''; // Reset caption
     await fetchPhotos();
 }
 
-async function uploadPhoto(file, caption) {
+async function uploadPhoto(file) {
     // 1. Compress image if needed
     const compressedFile = await compressImage(file);
 
@@ -152,6 +166,7 @@ async function uploadPhoto(file, caption) {
     const dimensions = await getImageDimensions(compressedFile);
 
     // 5. Insert record into Database
+    // Note: We don't insert caption here anymore, user adds it later via edit
     const { error: dbError } = await supabase
         .from('photos')
         .insert({
@@ -159,8 +174,7 @@ async function uploadPhoto(file, caption) {
             width: dimensions.width,
             height: dimensions.height,
             aspect_ratio: dimensions.width / dimensions.height,
-            filter_settings: state.filterSettings,
-            caption: caption || null
+            filter_settings: state.filterSettings
         });
 
     if (dbError) throw dbError;
@@ -293,6 +307,20 @@ function createGridItem(photo) {
     const actions = document.createElement('div');
     actions.className = 'item-actions';
 
+    // Edit button
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-btn';
+    editBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11.06 1L15 4.94L12.56 7.38L8.62 3.44L11.06 1ZM1 11.06L7.56 4.5L11.5 8.44L4.94 15H1V11.06Z" fill="currentColor"/>
+        </svg>
+    `;
+    editBtn.title = 'Edit details';
+    editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEditModal(photo);
+    });
+
     // Delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.innerHTML = `
@@ -306,6 +334,7 @@ function createGridItem(photo) {
         deletePhoto(photo);
     });
 
+    actions.appendChild(editBtn);
     actions.appendChild(deleteBtn);
     overlay.appendChild(actions);
 
@@ -497,6 +526,45 @@ function closeLightbox() {
     setTimeout(() => {
         elements.lightboxImage.src = '';
     }, 300); // Clear after fade out
+}
+
+// ===================================
+// Edit Modal Logic
+// ===================================
+function openEditModal(photo) {
+    state.currentEditingPhoto = photo;
+    elements.editCaptionInput.value = photo.caption || '';
+    elements.editModal.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent scrolling
+}
+
+function closeEditModal() {
+    elements.editModal.classList.remove('active');
+    document.body.style.overflow = '';
+    state.currentEditingPhoto = null;
+}
+
+async function savePhotoDetails() {
+    if (!state.currentEditingPhoto) return;
+
+    const newCaption = elements.editCaptionInput.value.trim();
+    const photoId = state.currentEditingPhoto.id;
+
+    try {
+        const { error } = await supabase
+            .from('photos')
+            .update({ caption: newCaption || null })
+            .eq('id', photoId);
+
+        if (error) throw error;
+
+        showNotification('Changes saved');
+        closeEditModal();
+        await fetchPhotos(); // Refresh grid
+    } catch (error) {
+        console.error('Error saving details:', error);
+        showNotification('Failed to save changes');
+    }
 }
 
 // ===================================
