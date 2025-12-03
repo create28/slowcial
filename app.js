@@ -563,7 +563,11 @@ async function savePhotoDetails() {
         await fetchPhotos(); // Refresh grid
     } catch (error) {
         console.error('Error saving details:', error);
-        showNotification('Failed to save changes');
+        if (error.code === 'PGRST204') {
+            showNotification('Error: Missing database column. Please run update_schema.sql');
+        } else {
+            showNotification('Failed to save changes');
+        }
     }
 }
 
