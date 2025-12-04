@@ -231,7 +231,8 @@ body {
 }
 
 .filter-panel.active {
-    max-height: 400px;
+    max-height: 500px;
+    /* Increased to ensure buttons are visible */
 }
 
 .filter-content {
@@ -345,7 +346,8 @@ select:focus {
    Upload Section ("Film Loading")
    =================================== */
 .upload-section {
-    padding: var(--spacing-2xl) var(--spacing-xl);
+    padding: var(--spacing-xl) var(--spacing-xl);
+    /* Reduced top/bottom padding */
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
@@ -354,7 +356,8 @@ select:focus {
 .upload-zone {
     border: 2px dashed #555;
     border-radius: 8px;
-    padding: var(--spacing-3xl);
+    padding: var(--spacing-lg);
+    /* Reduced padding for smaller height */
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;

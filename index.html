@@ -139,6 +139,30 @@
                     <label for="editCaptionInput">Caption</label>
                     <textarea id="editCaptionInput" rows="3" placeholder="Write a caption..."></textarea>
                 </div>
+
+                <div class="metadata-grid"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label for="editDateInput">Date Taken</label>
+                        <input type="datetime-local" id="editDateInput"
+                            style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace;">
+                    </div>
+                    <div class="form-group">
+                        <label for="editShutterInput">Shutter Speed</label>
+                        <input type="text" id="editShutterInput" placeholder="e.g. 1/500"
+                            style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace;">
+                    </div>
+                    <div class="form-group">
+                        <label for="editApertureInput">Aperture</label>
+                        <input type="text" id="editApertureInput" placeholder="e.g. f/2.8"
+                            style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace;">
+                    </div>
+                    <div class="form-group">
+                        <label for="editIsoInput">ISO</label>
+                        <input type="text" id="editIsoInput" placeholder="e.g. 400"
+                            style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace;">
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
