@@ -14,11 +14,17 @@ const state = {
 // ===================================
 // DOM Elements
 // ===================================
+// ===================================
+// DOM Elements
+// ===================================
 const elements = {
+    // ... (existing elements) ...
+    uploadSection: document.getElementById('uploadSection'), // Wrapper for upload zone
     uploadZone: document.getElementById('uploadZone'),
     fileInput: document.getElementById('fileInput'),
     photoGrid: document.getElementById('photoGrid'),
     emptyState: document.getElementById('emptyState'),
+    // ... (filter elements) ...
     filterPanel: document.getElementById('filterPanel'),
     filterToggle: document.getElementById('filterToggle'),
     filterColor: document.getElementById('filterColor'),
@@ -28,11 +34,12 @@ const elements = {
     colorValue: document.querySelector('.color-value'),
     applyFilter: document.getElementById('applyFilter'),
     resetFilter: document.getElementById('resetFilter'),
+    // ... (lightbox elements) ...
     lightbox: document.getElementById('lightbox'),
     lightboxImage: document.getElementById('lightboxImage'),
     lightboxCaption: document.getElementById('lightboxCaption'),
     lightboxClose: document.getElementById('lightboxClose'),
-    // Edit Modal
+    // ... (edit modal elements) ...
     editModal: document.getElementById('editModal'),
     editModalClose: document.getElementById('editModalClose'),
     editCaptionInput: document.getElementById('editCaptionInput'),
@@ -41,7 +48,16 @@ const elements = {
     editApertureInput: document.getElementById('editApertureInput'),
     editIsoInput: document.getElementById('editIsoInput'),
     cancelEditBtn: document.getElementById('cancelEditBtn'),
-    saveEditBtn: document.getElementById('saveEditBtn')
+    saveEditBtn: document.getElementById('saveEditBtn'),
+    // Auth Elements
+    loginBtn: document.getElementById('loginBtn'),
+    logoutBtn: document.getElementById('logoutBtn'),
+    loginModal: document.getElementById('loginModal'),
+    loginModalClose: document.getElementById('loginModalClose'),
+    emailInput: document.getElementById('emailInput'),
+    passwordInput: document.getElementById('passwordInput'),
+    submitLoginBtn: document.getElementById('submitLoginBtn'),
+    loginError: document.getElementById('loginError')
 };
 
 // ===================================
@@ -50,13 +66,79 @@ const elements = {
 async function init() {
     loadFilterSettings();
     setupEventListeners();
+
+    // Check initial auth state
+    const { data: { session } } = await supabase.auth.getSession();
+    updateAuthUI(session);
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange((_event, session) => {
+        updateAuthUI(session);
+    });
+
     await fetchPhotos();
+}
+
+// ===================================
+// Auth Logic
+// ===================================
+function updateAuthUI(session) {
+    const isAdmin = !!session;
+
+    // Header controls
+    if (isAdmin) {
+        elements.loginBtn.classList.add('hidden');
+        elements.logoutBtn.classList.remove('hidden');
+        elements.uploadSection.classList.remove('hidden');
+    } else {
+        elements.loginBtn.classList.remove('hidden');
+        elements.logoutBtn.classList.add('hidden');
+        elements.uploadSection.classList.add('hidden');
+    }
+
+    // Update grid items (show/hide edit/delete buttons)
+    // We re-render the grid to apply the correct visibility to buttons
+    renderGrid(isAdmin);
+}
+
+async function handleLogin() {
+    const email = elements.emailInput.value;
+    const password = elements.passwordInput.value;
+
+    elements.loginError.style.display = 'none';
+    elements.submitLoginBtn.textContent = 'Signing in...';
+    elements.submitLoginBtn.disabled = true;
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+
+    if (error) {
+        elements.loginError.textContent = error.message;
+        elements.loginError.style.display = 'block';
+        elements.submitLoginBtn.textContent = 'Sign In';
+        elements.submitLoginBtn.disabled = false;
+    } else {
+        // Success - modal will close via onAuthStateChange -> updateAuthUI
+        elements.emailInput.value = '';
+        elements.passwordInput.value = '';
+        elements.submitLoginBtn.textContent = 'Sign In';
+        elements.submitLoginBtn.disabled = false;
+        elements.loginModal.classList.remove('active');
+    }
+}
+
+async function handleLogout() {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error('Error signing out:', error);
 }
 
 // ===================================
 // Event Listeners
 // ===================================
 function setupEventListeners() {
+    // ... (existing listeners) ...
     // Upload zone interactions
     elements.uploadZone.addEventListener('click', () => elements.fileInput.click());
     elements.fileInput.addEventListener('change', handleFileSelect);
@@ -85,6 +167,7 @@ function setupEventListeners() {
         if (e.key === 'Escape') {
             if (elements.lightbox.classList.contains('active')) closeLightbox();
             if (elements.editModal.classList.contains('active')) closeEditModal();
+            if (elements.loginModal.classList.contains('active')) elements.loginModal.classList.remove('active');
         }
     });
 
@@ -96,9 +179,106 @@ function setupEventListeners() {
         if (e.target === elements.editModal) closeEditModal();
     });
 
+    // Auth Events
+    elements.loginBtn.addEventListener('click', () => elements.loginModal.classList.add('active'));
+    elements.loginModalClose.addEventListener('click', () => elements.loginModal.classList.remove('active'));
+    elements.loginModal.addEventListener('click', (e) => {
+        if (e.target === elements.loginModal) elements.loginModal.classList.remove('active');
+    });
+    elements.submitLoginBtn.addEventListener('click', handleLogin);
+    elements.logoutBtn.addEventListener('click', handleLogout);
+
     // Prevent default drag behavior on document
     document.addEventListener('dragover', (e) => e.preventDefault());
     document.addEventListener('drop', (e) => e.preventDefault());
+}
+
+// ... (rest of file) ...
+
+// ===================================
+// Grid Rendering
+// ===================================
+function renderGrid(isAdmin = false) {
+    elements.photoGrid.innerHTML = '';
+
+    state.photos.forEach(photo => {
+        const gridItem = createGridItem(photo, isAdmin);
+        elements.photoGrid.appendChild(gridItem);
+    });
+}
+
+function createGridItem(photo, isAdmin) {
+    const item = document.createElement('div');
+    // ... (existing item creation) ...
+    item.className = 'grid-item';
+    item.dataset.id = photo.id;
+
+    const sizeClass = getItemSizeClass(photo.aspect_ratio);
+    if (sizeClass) {
+        item.classList.add(sizeClass);
+    }
+
+    const img = document.createElement('img');
+    img.src = photo.url;
+    img.alt = photo.caption || 'Photo';
+    img.loading = 'lazy';
+
+    const filter = document.createElement('div');
+    filter.className = 'item-filter';
+    updateFilterStyle(filter, state.filterSettings);
+
+    if (photo.caption) {
+        const caption = document.createElement('div');
+        caption.className = 'grid-caption';
+        caption.textContent = photo.caption;
+        item.appendChild(caption);
+    }
+
+    // Only add overlay/actions if admin
+    if (isAdmin) {
+        const overlay = document.createElement('div');
+        overlay.className = 'item-overlay';
+
+        const actions = document.createElement('div');
+        actions.className = 'item-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-btn';
+        editBtn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.06 1L15 4.94L12.56 7.38L8.62 3.44L11.06 1ZM1 11.06L7.56 4.5L11.5 8.44L4.94 15H1V11.06Z" fill="currentColor"/>
+            </svg>
+        `;
+        editBtn.title = 'Edit details';
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEditModal(photo);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4H14M6 4V2H10V4M12 4V14H4V4H12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        `;
+        deleteBtn.title = 'Delete photo';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deletePhoto(photo);
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        overlay.appendChild(actions);
+        item.appendChild(overlay);
+    }
+
+    item.appendChild(img);
+    item.appendChild(filter);
+
+    item.addEventListener('click', () => openLightbox(photo));
+
+    return item;
 }
 
 // ===================================
@@ -272,16 +452,16 @@ async function fetchPhotos() {
 // ===================================
 // Grid Rendering
 // ===================================
-function renderGrid() {
+function renderGrid(isAdmin = false) {
     elements.photoGrid.innerHTML = '';
 
     state.photos.forEach(photo => {
-        const gridItem = createGridItem(photo);
+        const gridItem = createGridItem(photo, isAdmin);
         elements.photoGrid.appendChild(gridItem);
     });
 }
 
-function createGridItem(photo) {
+function createGridItem(photo, isAdmin) {
     const item = document.createElement('div');
     item.className = 'grid-item';
     item.dataset.id = photo.id;
@@ -307,44 +487,47 @@ function createGridItem(photo) {
         item.appendChild(caption);
     }
 
-    const overlay = document.createElement('div');
-    overlay.className = 'item-overlay';
+    // Only add overlay/actions if admin
+    if (isAdmin) {
+        const overlay = document.createElement('div');
+        overlay.className = 'item-overlay';
 
-    const actions = document.createElement('div');
-    actions.className = 'item-actions';
+        const actions = document.createElement('div');
+        actions.className = 'item-actions';
 
-    const editBtn = document.createElement('button');
-    editBtn.className = 'edit-btn';
-    editBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M11.06 1L15 4.94L12.56 7.38L8.62 3.44L11.06 1ZM1 11.06L7.56 4.5L11.5 8.44L4.94 15H1V11.06Z" fill="currentColor"/>
-        </svg>
-    `;
-    editBtn.title = 'Edit details';
-    editBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openEditModal(photo);
-    });
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-btn';
+        editBtn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.06 1L15 4.94L12.56 7.38L8.62 3.44L11.06 1ZM1 11.06L7.56 4.5L11.5 8.44L4.94 15H1V11.06Z" fill="currentColor"/>
+            </svg>
+        `;
+        editBtn.title = 'Edit details';
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEditModal(photo);
+        });
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M2 4H14M6 4V2H10V4M12 4V14H4V4H12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-    `;
-    deleteBtn.title = 'Delete photo';
-    deleteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        deletePhoto(photo);
-    });
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4H14M6 4V2H10V4M12 4V14H4V4H12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        `;
+        deleteBtn.title = 'Delete photo';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deletePhoto(photo);
+        });
 
-    actions.appendChild(editBtn);
-    actions.appendChild(deleteBtn);
-    overlay.appendChild(actions);
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        overlay.appendChild(actions);
+        item.appendChild(overlay);
+    }
 
     item.appendChild(img);
     item.appendChild(filter);
-    item.appendChild(overlay);
 
     item.addEventListener('click', () => openLightbox(photo));
 

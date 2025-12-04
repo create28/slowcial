@@ -84,6 +84,33 @@
             </div>
         </div>
 
+        <!-- Login Modal -->
+        <div class="modal" id="loginModal">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2>Login</h2>
+                    <button class="close-btn" id="loginModalClose">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="emailInput">Email</label>
+                        <input type="email" id="emailInput" placeholder="Enter your email"
+                            style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace; width: 100%;">
+                    </div>
+                    <div class="form-group">
+                        <label for="passwordInput">Password</label>
+                        <input type="password" id="passwordInput" placeholder="Enter your password"
+                            style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace; width: 100%;">
+                    </div>
+                    <div id="loginError" style="color: #ff4444; font-size: 0.8rem; margin-top: 0.5rem; display: none;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" id="submitLoginBtn" style="width: 100%;">Sign In</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Upload Section -->
         <section class="upload-section">
             <div class="upload-zone" id="uploadZone">
