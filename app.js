@@ -87,13 +87,13 @@ function updateAuthUI(session) {
 
     // Header controls
     if (isAdmin) {
-        elements.loginBtn.classList.add('hidden');
-        elements.logoutBtn.classList.remove('hidden');
-        elements.uploadSection.classList.remove('hidden');
+        elements.loginBtn.style.display = 'none';
+        elements.logoutBtn.style.display = 'block';
+        elements.uploadSection.style.display = 'block';
     } else {
-        elements.loginBtn.classList.remove('hidden');
-        elements.logoutBtn.classList.add('hidden');
-        elements.uploadSection.classList.add('hidden');
+        elements.loginBtn.style.display = 'block';
+        elements.logoutBtn.style.display = 'none';
+        elements.uploadSection.style.display = 'none';
     }
 
     // Update grid items (show/hide edit/delete buttons)
