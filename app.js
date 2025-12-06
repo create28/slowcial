@@ -181,7 +181,6 @@ if (error) {
         showNotification(state.isSignup ? 'Account created successfully!' : 'Signed in successfully');
     }
 }
-}
 
 function toggleAuthMode(e) {
     if (e) e.preventDefault();
@@ -255,7 +254,17 @@ function setupEventListeners() {
     });
 
     // Auth Events
-    elements.loginBtn.addEventListener('click', () => elements.loginModal.classList.add('active'));
+    // Auth Events
+    elements.loginBtn.addEventListener('click', () => {
+        state.isSignup = false; // Reset to login
+        elements.modalTitle.textContent = 'Login';
+        elements.signupFields.classList.add('hidden');
+        elements.submitLoginBtn.textContent = 'Sign In';
+        elements.authToggleText.textContent = 'New to Friendsta?';
+        elements.authToggleBtn.textContent = 'Sign Up';
+        elements.loginError.style.display = 'none';
+        elements.loginModal.classList.add('active');
+    });
     elements.loginModalClose.addEventListener('click', () => elements.loginModal.classList.remove('active'));
     elements.loginModal.addEventListener('click', (e) => {
         if (e.target === elements.loginModal) elements.loginModal.classList.remove('active');
