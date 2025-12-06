@@ -653,6 +653,31 @@ function createGridItem(photo, isAdmin) {
     img.alt = photo.caption || 'Photo';
     img.loading = 'lazy';
 
+    // Item Header (User & Date) - Primarily for Feed Layout
+    const header = document.createElement('div');
+    header.className = 'item-header';
+
+    // Username
+    const username = document.createElement('div');
+    username.className = 'item-username';
+    username.textContent = photo.profiles?.username ? `@${photo.profiles.username}` : '@anonymous';
+
+    // Date
+    const dateBtn = document.createElement('div');
+    dateBtn.className = 'item-date';
+    if (photo.created_at) {
+        const date = new Date(photo.created_at);
+        dateBtn.textContent = date.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    header.appendChild(username);
+    header.appendChild(dateBtn);
+    item.appendChild(header);
+
     const filter = document.createElement('div');
     filter.className = 'item-filter';
     updateFilterStyle(filter, state.filterSettings);

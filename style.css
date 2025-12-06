@@ -471,7 +471,8 @@ select:focus {
     flex-direction: column;
     align-items: center;
     gap: var(--spacing-xl);
-    max-width: 600px;
+    max-width: 60vw;
+    /* 60% of screen width */
     margin: 0 auto;
 }
 
@@ -480,6 +481,9 @@ select:focus {
     grid-column: auto;
     /* Reset grid properties */
     aspect-ratio: auto;
+    background: transparent;
+    box-shadow: none;
+    /* Cleaner look for feed */
 }
 
 /* Ensure images maintain aspect ratio but fill width in feed */
@@ -489,6 +493,53 @@ select:focus {
     /* Prevent extremely tall images from taking over */
     object-fit: contain;
     background: #000;
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+    /* Spacing for caption below */
+    border: 1px solid var(--metal-dark);
+    /* Subtle border */
+}
+
+/* Feed Header (User & Date) */
+.item-header {
+    display: none;
+    /* Hidden by default (in Grid view) */
+}
+
+.photo-grid.feed-layout .item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+    padding: 0 var(--spacing-xs);
+    font-family: 'Courier Prime', monospace;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.photo-grid.feed-layout .item-username {
+    color: var(--text-on-silver);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* Hide Grid-specific badges in Feed Layout */
+.photo-grid.feed-layout .grid-author,
+.photo-grid.feed-layout .grid-metadata-badge {
+    display: none !important;
+}
+
+/* Adjust caption for Feed Layout */
+.photo-grid.feed-layout .grid-caption {
+    position: static;
+    background: transparent;
+    padding: 0 var(--spacing-xs);
+    font-size: 1rem;
+    color: var(--text-main);
+    text-align: left;
+    white-space: normal;
+    font-family: var(--font-body);
 }
 
 .grid-item {
