@@ -86,14 +86,27 @@
             </div>
         </div>
 
-        <!-- Login Modal -->
+        <!-- Auth Modal (Login/Signup) -->
         <div class="modal" id="loginModal">
             <div class="modal-content" style="max-width: 400px;">
                 <div class="modal-header">
-                    <h2>Login</h2>
+                    <h2 id="modalTitle">Login</h2>
                     <button class="close-btn" id="loginModalClose">&times;</button>
                 </div>
                 <div class="modal-body">
+                    <div class="form-group hidden" id="signupFields">
+                        <div class="form-group">
+                            <label for="fullNameInput">Full Name</label>
+                            <input type="text" id="fullNameInput" placeholder="John Doe"
+                                style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace; width: 100%;">
+                        </div>
+                        <div class="form-group">
+                            <label for="usernameInput">Username</label>
+                            <input type="text" id="usernameInput" placeholder="johndoe"
+                                style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace; width: 100%;">
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label for="emailInput">Email</label>
                         <input type="email" id="emailInput" placeholder="Enter your email"
@@ -104,7 +117,14 @@
                         <input type="password" id="passwordInput" placeholder="Enter your password"
                             style="background: #000; border: 1px solid #333; color: #fff; padding: 0.5rem; border-radius: 2px; font-family: 'Courier Prime', monospace; width: 100%;">
                     </div>
+
                     <div id="loginError" style="color: #ff4444; font-size: 0.8rem; margin-top: 0.5rem; display: none;">
+                    </div>
+
+                    <div style="margin-top: 1rem; text-align: center; font-size: 0.9rem;">
+                        <span id="authToggleText">New to Friendsta?</span>
+                        <a href="#" id="authToggleBtn"
+                            style="color: var(--color-accent-primary); text-decoration: none;">Sign Up</a>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -153,6 +173,7 @@
         <div class="lightbox-content">
             <img src="" alt="Full screen photo" id="lightboxImage">
             <div class="lightbox-caption" id="lightboxCaption"></div>
+            <div class="lightbox-metadata" id="lightboxMetadata"></div>
         </div>
     </div>
 
@@ -200,6 +221,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>

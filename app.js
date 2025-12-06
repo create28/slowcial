@@ -7,8 +7,10 @@ const state = {
     filterSettings: {
         color: '#667eea',
         opacity: 30,
+        opacity: 30,
         blendMode: 'multiply'
-    }
+    },
+    isSignup: false
 };
 
 // ===================================
@@ -57,7 +59,16 @@ const elements = {
     emailInput: document.getElementById('emailInput'),
     passwordInput: document.getElementById('passwordInput'),
     submitLoginBtn: document.getElementById('submitLoginBtn'),
-    loginError: document.getElementById('loginError')
+    loginError: document.getElementById('loginError'),
+    loginError: document.getElementById('loginError'),
+    lightboxMetadata: document.getElementById('lightboxMetadata'),
+    // Signup Elements
+    modalTitle: document.getElementById('modalTitle'),
+    signupFields: document.getElementById('signupFields'),
+    fullNameInput: document.getElementById('fullNameInput'),
+    usernameInput: document.getElementById('usernameInput'),
+    authToggleText: document.getElementById('authToggleText'),
+    authToggleBtn: document.getElementById('authToggleBtn')
 };
 
 // ===================================
@@ -86,13 +97,14 @@ function updateAuthUI(session) {
     const isAdmin = !!session;
 
     // Header controls
+    // Header controls
     if (isAdmin) {
-        elements.loginBtn.style.display = 'none';
-        elements.logoutBtn.style.display = 'block';
-        elements.uploadSection.style.display = 'block';
+        elements.loginBtn.classList.add('hidden');
+        elements.logoutBtn.classList.remove('hidden');
+        elements.uploadSection.style.display = 'block'; // Keep this as block since it has specific layout styles
     } else {
-        elements.loginBtn.style.display = 'block';
-        elements.logoutBtn.style.display = 'none';
+        elements.loginBtn.classList.remove('hidden');
+        elements.logoutBtn.classList.add('hidden');
         elements.uploadSection.style.display = 'none';
     }
 
@@ -101,32 +113,95 @@ function updateAuthUI(session) {
     renderGrid(isAdmin);
 }
 
-async function handleLogin() {
-    const email = elements.emailInput.value;
-    const password = elements.passwordInput.value;
+const email = elements.emailInput.value;
+const password = elements.passwordInput.value;
 
-    elements.loginError.style.display = 'none';
-    elements.submitLoginBtn.textContent = 'Signing in...';
-    elements.submitLoginBtn.disabled = true;
+elements.loginError.style.display = 'none';
+elements.submitLoginBtn.disabled = true;
+elements.submitLoginBtn.textContent = state.isSignup ? 'Creating Account...' : 'Signing in...';
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+let result;
+
+if (state.isSignup) {
+    const fullName = elements.fullNameInput.value;
+    const username = elements.usernameInput.value;
+
+    if (!fullName || !username) {
+        elements.loginError.textContent = 'Please fill in all fields';
+        elements.loginError.style.display = 'block';
+        elements.submitLoginBtn.disabled = false;
+        elements.submitLoginBtn.textContent = 'Sign Up';
+        return;
+    }
+
+    result = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                full_name: fullName,
+                username: username
+            }
+        }
+    });
+} else {
+    result = await supabase.auth.signInWithPassword({
         email,
         password
     });
+}
 
-    if (error) {
-        elements.loginError.textContent = error.message;
+const { data, error } = result;
+
+if (error) {
+    elements.loginError.textContent = error.message;
+    elements.loginError.style.display = 'block';
+    elements.submitLoginBtn.textContent = state.isSignup ? 'Sign Up' : 'Sign In';
+    elements.submitLoginBtn.disabled = false;
+} else {
+    if (state.isSignup && data?.user && !data?.session) {
+        // Email confirmation required case (if enabled) but assuming auto-confirm for now or let user know
+        elements.loginError.textContent = 'Please check your email to confirm your account.';
+        elements.loginError.style.color = '#4ade80'; // Green
         elements.loginError.style.display = 'block';
-        elements.submitLoginBtn.textContent = 'Sign In';
+        elements.submitLoginBtn.textContent = 'Sign Up';
         elements.submitLoginBtn.disabled = false;
+        // Don't close modal if confirmation needed
     } else {
-        // Success - modal will close via onAuthStateChange -> updateAuthUI
+        // Success
         elements.emailInput.value = '';
         elements.passwordInput.value = '';
-        elements.submitLoginBtn.textContent = 'Sign In';
+        elements.fullNameInput.value = '';
+        elements.usernameInput.value = '';
+
+        elements.submitLoginBtn.textContent = state.isSignup ? 'Sign Up' : 'Sign In';
         elements.submitLoginBtn.disabled = false;
         elements.loginModal.classList.remove('active');
+
+        showNotification(state.isSignup ? 'Account created successfully!' : 'Signed in successfully');
     }
+}
+}
+
+function toggleAuthMode(e) {
+    if (e) e.preventDefault();
+    state.isSignup = !state.isSignup;
+
+    if (state.isSignup) {
+        elements.modalTitle.textContent = 'Create Account';
+        elements.signupFields.classList.remove('hidden');
+        elements.submitLoginBtn.textContent = 'Sign Up';
+        elements.authToggleText.textContent = 'Already have an account?';
+        elements.authToggleBtn.textContent = 'Sign In';
+    } else {
+        elements.modalTitle.textContent = 'Login';
+        elements.signupFields.classList.add('hidden');
+        elements.submitLoginBtn.textContent = 'Sign In';
+        elements.authToggleText.textContent = 'New to Friendsta?';
+        elements.authToggleBtn.textContent = 'Sign Up';
+    }
+
+    elements.loginError.style.display = 'none';
 }
 
 async function handleLogout() {
@@ -186,6 +261,7 @@ function setupEventListeners() {
         if (e.target === elements.loginModal) elements.loginModal.classList.remove('active');
     });
     elements.submitLoginBtn.addEventListener('click', handleLogin);
+    elements.authToggleBtn.addEventListener('click', toggleAuthMode);
     elements.logoutBtn.addEventListener('click', handleLogout);
 
     // Prevent default drag behavior on document
@@ -232,6 +308,29 @@ function createGridItem(photo, isAdmin) {
         caption.className = 'grid-caption';
         caption.textContent = photo.caption;
         item.appendChild(caption);
+    }
+
+    // Metadata Badge (Hover)
+    if (photo.shutter_speed || photo.aperture || photo.iso) {
+        const metaBadge = document.createElement('div');
+        metaBadge.className = 'grid-metadata-badge';
+        const parts = [];
+        if (photo.aperture) parts.push(photo.aperture);
+        if (photo.shutter_speed) parts.push(photo.shutter_speed);
+        if (photo.iso) parts.push(`ISO ${photo.iso}`);
+        metaBadge.textContent = parts.join(' • ');
+        // Append to item - will be positioned via CSS
+        item.appendChild(metaBadge);
+    }
+
+    // Author Badge (Bottom Right or Top Left?)
+    // Let's put it on top-left, move metadata to bottom-left? 
+    // Or just put it above the caption.
+    if (photo.profiles && photo.profiles.username) {
+        const authorBadge = document.createElement('div');
+        authorBadge.className = 'grid-author';
+        authorBadge.textContent = `@${photo.profiles.username}`;
+        item.appendChild(authorBadge);
     }
 
     // Only add overlay/actions if admin
@@ -334,6 +433,21 @@ async function processFiles(files) {
 }
 
 async function uploadPhoto(file) {
+    // 0. Extract EXIF data (before compression)
+    let exifData = {
+        date_taken: null,
+        shutter_speed: null,
+        aperture: null,
+        iso: null
+    };
+
+    try {
+        exifData = await extractExifData(file);
+        console.log('Extracted EXIF:', exifData);
+    } catch (e) {
+        console.warn('Could not extract EXIF data:', e);
+    }
+
     // 1. Compress image if needed
     const compressedFile = await compressImage(file);
 
@@ -353,6 +467,10 @@ async function uploadPhoto(file) {
     // 4. Get image dimensions
     const dimensions = await getImageDimensions(compressedFile);
 
+    // 4. Get active user
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('You must be logged in to upload photos');
+
     // 5. Insert record into Database
     const { data, error: dbError } = await supabase
         .from('photos')
@@ -363,10 +481,8 @@ async function uploadPhoto(file) {
             aspect_ratio: dimensions.width / dimensions.height,
             filter_settings: state.filterSettings,
             caption: null,
-            date_taken: null,
-            shutter_speed: null,
-            aperture: null,
-            iso: null
+            user_id: session.user.id,
+            ...exifData // Add extracted EXIF data
         })
         .select()
         .single();
@@ -434,9 +550,16 @@ function getImageDimensions(file) {
 // Data Fetching
 // ===================================
 async function fetchPhotos() {
+    // Join with profiles table to get username and avatar
     const { data, error } = await supabase
         .from('photos')
-        .select('*')
+        .select(`
+            *,
+            profiles (
+                username,
+                avatar_url
+            )
+        `)
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -687,6 +810,53 @@ function hexToRgba(hex, alpha) {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+function extractExifData(file) {
+    return new Promise((resolve, reject) => {
+        EXIF.getData(file, function () {
+            try {
+                // Date Taken
+                const dateTaken = EXIF.getTag(this, "DateTimeOriginal");
+                let isoDate = null;
+                if (dateTaken) {
+                    // Convert "2023:05:21 14:30:00" to ISO string
+                    const parts = dateTaken.split(' ');
+                    const dateParts = parts[0].split(':');
+                    const timeParts = parts[1].split(':');
+                    const d = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], timeParts[0], timeParts[1], timeParts[2]);
+                    isoDate = d.toISOString();
+                }
+
+                // Shutter Speed (ExposureTime)
+                const exposureTime = EXIF.getTag(this, "ExposureTime");
+                let shutterSpeed = null;
+                if (exposureTime) {
+                    if (exposureTime < 1) {
+                        shutterSpeed = `1/${Math.round(1 / exposureTime)}`;
+                    } else {
+                        shutterSpeed = `${exposureTime}`;
+                    }
+                }
+
+                // Aperture (FNumber)
+                const fNumber = EXIF.getTag(this, "FNumber");
+                const aperture = fNumber ? `f/${fNumber}` : null;
+
+                // ISO (ISOSpeedRatings)
+                const iso = EXIF.getTag(this, "ISOSpeedRatings");
+
+                resolve({
+                    date_taken: isoDate,
+                    shutter_speed: shutterSpeed,
+                    aperture: aperture,
+                    iso: iso ? iso.toString() : null
+                });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    });
+}
+
 // ===================================
 // Lightbox Logic
 // ===================================
@@ -695,6 +865,24 @@ function openLightbox(photo) {
     elements.lightboxCaption.textContent = photo.caption || '';
     elements.lightboxImage.style.backgroundColor = '';
     elements.lightboxImage.style.mixBlendMode = '';
+
+    // Populate Metadata
+    const metaParts = [];
+    if (photo.date_taken) {
+        const date = new Date(photo.date_taken);
+        metaParts.push(date.toLocaleDateString());
+    }
+    if (photo.aperture) metaParts.push(photo.aperture);
+    if (photo.shutter_speed) metaParts.push(photo.shutter_speed);
+    if (photo.iso) metaParts.push(`ISO ${photo.iso}`);
+
+    if (metaParts.length > 0) {
+        elements.lightboxMetadata.textContent = metaParts.join(' • ');
+        elements.lightboxMetadata.style.display = 'block';
+    } else {
+        elements.lightboxMetadata.style.display = 'none';
+    }
+
     elements.lightbox.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
