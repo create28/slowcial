@@ -467,9 +467,9 @@ select:focus {
 
 /* Vertical Feed Layout (Global Feed) */
 .photo-grid.feed-layout {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
     gap: var(--spacing-xl);
     max-width: 60vw;
     /* 60% of screen width */
@@ -1087,4 +1087,86 @@ select:focus {
 
 .hidden {
     display: none !important;
+}
+
+/* ===================================
+   Responsive Mobile Styles
+   =================================== */
+@media (max-width: 768px) {
+
+    /* Header Adjustments */
+    .header-content {
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm);
+        justify-content: center;
+    }
+
+    header h1 {
+        font-size: 1.2rem;
+        margin-right: 0;
+        width: 100%;
+        text-align: center;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .main-nav {
+        margin-left: 0;
+        margin-right: 0;
+        gap: var(--spacing-md);
+        order: 3;
+        /* Move nav below or keep in flow */
+        width: 100%;
+        justify-content: center;
+        margin-top: var(--spacing-xs);
+        border-top: 1px solid #222;
+        padding-top: var(--spacing-xs);
+    }
+
+    .nav-btn {
+        font-size: 0.9rem;
+    }
+
+    .header-actions {
+        order: 2;
+        /* Put actions below title but above nav potentially, or alongside */
+        gap: var(--spacing-xs);
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn-secondary {
+        padding: 4px 10px;
+        font-size: 0.8rem;
+    }
+
+    /* Feed Layout */
+    .photo-grid.feed-layout {
+        max-width: 95vw;
+        /* Use full width on mobile */
+        gap: var(--spacing-lg);
+    }
+
+    .photo-grid.feed-layout .grid-item img {
+        border: none;
+        /* Remove border on mobile for cleaner look */
+    }
+
+    /* Upload Zone */
+    .upload-section {
+        padding: var(--spacing-md);
+    }
+
+    .upload-zone {
+        padding: var(--spacing-md);
+    }
+
+    .upload-zone h2 {
+        font-size: 1.2rem;
+    }
+
+    /* Grid Layout - Force single column on mobile for My Profile too */
+    .photo-grid {
+        grid-template-columns: 1fr;
+    }
 }
