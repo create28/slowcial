@@ -10,7 +10,8 @@ const state = {
         opacity: 30,
         blendMode: 'multiply'
     },
-    isSignup: false
+    isSignup: false,
+    currentView: 'global' // 'global' or 'profile'
 };
 
 // ===================================
@@ -68,7 +69,11 @@ const elements = {
     fullNameInput: document.getElementById('fullNameInput'),
     usernameInput: document.getElementById('usernameInput'),
     authToggleText: document.getElementById('authToggleText'),
-    authToggleBtn: document.getElementById('authToggleBtn')
+    authToggleText: document.getElementById('authToggleText'),
+    authToggleBtn: document.getElementById('authToggleBtn'),
+    // Navigation
+    navGlobal: document.getElementById('navGlobal'),
+    navProfile: document.getElementById('navProfile')
 };
 
 // ===================================
@@ -102,10 +107,13 @@ function updateAuthUI(session) {
         elements.loginBtn.classList.add('hidden');
         elements.logoutBtn.classList.remove('hidden');
         elements.uploadSection.style.display = 'block'; // Keep this as block since it has specific layout styles
+        elements.navProfile.classList.remove('hidden');
     } else {
         elements.loginBtn.classList.remove('hidden');
         elements.logoutBtn.classList.add('hidden');
         elements.uploadSection.style.display = 'none';
+        elements.navProfile.classList.add('hidden');
+        toggleView('global'); // Force back to global if logged out
     }
 
     // Update grid items (show/hide edit/delete buttons)
@@ -274,6 +282,10 @@ function setupEventListeners() {
     elements.submitLoginBtn.addEventListener('click', handleLogin);
     elements.authToggleBtn.addEventListener('click', toggleAuthMode);
     elements.logoutBtn.addEventListener('click', handleLogout);
+
+    // Navigation
+    elements.navGlobal.addEventListener('click', () => toggleView('global'));
+    elements.navProfile.addEventListener('click', () => toggleView('profile'));
 
     // Prevent default drag behavior on document
     document.addEventListener('dragover', (e) => e.preventDefault());
@@ -561,8 +573,7 @@ function getImageDimensions(file) {
 // Data Fetching
 // ===================================
 async function fetchPhotos() {
-    // Join with profiles table to get username and avatar
-    const { data, error } = await supabase
+    let query = supabase
         .from('photos')
         .select(`
             *,
@@ -573,6 +584,16 @@ async function fetchPhotos() {
         `)
         .order('created_at', { ascending: false });
 
+    // Filter by view
+    if (state.currentView === 'profile') {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            query = query.eq('user_id', session.user.id);
+        }
+    }
+
+    const { data, error } = await query;
+
     if (error) {
         console.error('Error fetching photos:', error);
         return;
@@ -581,6 +602,21 @@ async function fetchPhotos() {
     state.photos = data;
     renderGrid();
     updateEmptyState();
+}
+
+function toggleView(view) {
+    state.currentView = view;
+
+    // Update UI
+    if (view === 'global') {
+        elements.navGlobal.classList.add('active');
+        elements.navProfile.classList.remove('active');
+    } else {
+        elements.navGlobal.classList.remove('active');
+        elements.navProfile.classList.add('active');
+    }
+
+    fetchPhotos();
 }
 
 // ===================================

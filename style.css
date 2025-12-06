@@ -131,6 +131,49 @@ body {
 }
 
 /* ===================================
+   Navigation
+   =================================== */
+.main-nav {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-left: var(--spacing-xl);
+    flex-grow: 1;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-header);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: var(--spacing-xs) 0;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.nav-btn:hover {
+    color: var(--text-on-silver);
+}
+
+.nav-btn.active {
+    color: var(--accent-red);
+    font-weight: 700;
+}
+
+.nav-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--accent-red);
+}
+
+/* ===================================
    Buttons
    =================================== */
 /* ===================================
