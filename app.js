@@ -113,72 +113,74 @@ function updateAuthUI(session) {
     renderGrid(isAdmin);
 }
 
-const email = elements.emailInput.value;
-const password = elements.passwordInput.value;
+async function handleLogin() {
+    const email = elements.emailInput.value;
+    const password = elements.passwordInput.value;
 
-elements.loginError.style.display = 'none';
-elements.submitLoginBtn.disabled = true;
-elements.submitLoginBtn.textContent = state.isSignup ? 'Creating Account...' : 'Signing in...';
+    elements.loginError.style.display = 'none';
+    elements.submitLoginBtn.disabled = true;
+    elements.submitLoginBtn.textContent = state.isSignup ? 'Creating Account...' : 'Signing in...';
 
-let result;
+    let result;
 
-if (state.isSignup) {
-    const fullName = elements.fullNameInput.value;
-    const username = elements.usernameInput.value;
+    if (state.isSignup) {
+        const fullName = elements.fullNameInput.value;
+        const username = elements.usernameInput.value;
 
-    if (!fullName || !username) {
-        elements.loginError.textContent = 'Please fill in all fields';
-        elements.loginError.style.display = 'block';
-        elements.submitLoginBtn.disabled = false;
-        elements.submitLoginBtn.textContent = 'Sign Up';
-        return;
+        if (!fullName || !username) {
+            elements.loginError.textContent = 'Please fill in all fields';
+            elements.loginError.style.display = 'block';
+            elements.submitLoginBtn.disabled = false;
+            elements.submitLoginBtn.textContent = 'Sign Up';
+            return;
+        }
+
+        result = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    username: username
+                }
+            }
+        });
+    } else {
+        result = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
     }
 
-    result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            data: {
-                full_name: fullName,
-                username: username
-            }
-        }
-    });
-} else {
-    result = await supabase.auth.signInWithPassword({
-        email,
-        password
-    });
-}
+    const { data, error } = result;
 
-const { data, error } = result;
-
-if (error) {
-    elements.loginError.textContent = error.message;
-    elements.loginError.style.display = 'block';
-    elements.submitLoginBtn.textContent = state.isSignup ? 'Sign Up' : 'Sign In';
-    elements.submitLoginBtn.disabled = false;
-} else {
-    if (state.isSignup && data?.user && !data?.session) {
-        // Email confirmation required case (if enabled) but assuming auto-confirm for now or let user know
-        elements.loginError.textContent = 'Please check your email to confirm your account.';
-        elements.loginError.style.color = '#4ade80'; // Green
+    if (error) {
+        elements.loginError.textContent = error.message;
         elements.loginError.style.display = 'block';
-        elements.submitLoginBtn.textContent = 'Sign Up';
-        elements.submitLoginBtn.disabled = false;
-        // Don't close modal if confirmation needed
-    } else {
-        // Success
-        elements.emailInput.value = '';
-        elements.passwordInput.value = '';
-        elements.fullNameInput.value = '';
-        elements.usernameInput.value = '';
-
         elements.submitLoginBtn.textContent = state.isSignup ? 'Sign Up' : 'Sign In';
         elements.submitLoginBtn.disabled = false;
-        elements.loginModal.classList.remove('active');
+    } else {
+        if (state.isSignup && data?.user && !data?.session) {
+            // Email confirmation required case (if enabled) but assuming auto-confirm for now or let user know
+            elements.loginError.textContent = 'Please check your email to confirm your account.';
+            elements.loginError.style.color = '#4ade80'; // Green
+            elements.loginError.style.display = 'block';
+            elements.submitLoginBtn.textContent = 'Sign Up';
+            elements.submitLoginBtn.disabled = false;
+            // Don't close modal if confirmation needed
+        } else {
+            // Success
+            elements.emailInput.value = '';
+            elements.passwordInput.value = '';
+            elements.fullNameInput.value = '';
+            elements.usernameInput.value = '';
 
-        showNotification(state.isSignup ? 'Account created successfully!' : 'Signed in successfully');
+            elements.submitLoginBtn.textContent = state.isSignup ? 'Sign Up' : 'Sign In';
+            elements.submitLoginBtn.disabled = false;
+            elements.loginModal.classList.remove('active');
+
+            showNotification(state.isSignup ? 'Account created successfully!' : 'Signed in successfully');
+        }
     }
 }
 
