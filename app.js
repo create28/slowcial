@@ -92,6 +92,9 @@ async function init() {
         updateAuthUI(session);
     });
 
+    // Default to Feed Layout
+    elements.photoGrid.classList.add('feed-layout');
+
     await fetchPhotos();
 }
 
@@ -611,9 +614,13 @@ function toggleView(view) {
     if (view === 'global') {
         elements.navGlobal.classList.add('active');
         elements.navProfile.classList.remove('active');
+        // Switch to Feed Layout
+        elements.photoGrid.classList.add('feed-layout');
     } else {
         elements.navGlobal.classList.remove('active');
         elements.navProfile.classList.add('active');
+        // Switch to Grid Layout
+        elements.photoGrid.classList.remove('feed-layout');
     }
 
     fetchPhotos();

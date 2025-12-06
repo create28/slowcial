@@ -460,10 +460,35 @@ select:focus {
 
 .photo-grid {
     display: grid;
-    grid-template-columns: repeat(var(--grid-columns), 1fr);
-    gap: var(--grid-gap);
-    grid-auto-flow: dense;
-    grid-auto-rows: 250px;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg) 0;
+}
+
+/* Vertical Feed Layout (Global Feed) */
+.photo-grid.feed-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xl);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.photo-grid.feed-layout .grid-item {
+    width: 100%;
+    grid-column: auto;
+    /* Reset grid properties */
+    aspect-ratio: auto;
+}
+
+/* Ensure images maintain aspect ratio but fill width in feed */
+.photo-grid.feed-layout .grid-item img {
+    height: auto;
+    max-height: 80vh;
+    /* Prevent extremely tall images from taking over */
+    object-fit: contain;
+    background: #000;
 }
 
 .grid-item {
