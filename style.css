@@ -400,52 +400,71 @@ select:focus {
     width: 100%;
 }
 
+/* Global Typography Refinements for "Engraved" Look */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-header);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+
 .upload-zone {
-    border: 2px dashed #555;
-    border-radius: 8px;
+    border: 1px solid var(--metal-silver-dark);
+    border-radius: 4px;
+    /* Sharper corners for mechanical look */
     padding: var(--spacing-lg);
-    /* Reduced padding for smaller height */
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    background: rgba(255, 255, 255, 0.03);
+    background: #0a0a0a;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+    /* Deep inset look */
     position: relative;
+    margin-bottom: var(--spacing-lg);
+    /* Ensure spacing from grid */
 }
 
 .upload-zone:hover {
     border-color: var(--metal-silver);
-    background: rgba(255, 255, 255, 0.05);
+    background: #111;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+    /* Slightly shallower on hover */
 }
 
 .upload-zone.drag-over {
     border-color: var(--accent-red);
-    background: rgba(214, 35, 42, 0.1);
+    background: rgba(214, 35, 42, 0.05);
+    box-shadow: inset 0 0 10px rgba(214, 35, 42, 0.2);
 }
 
 .upload-icon {
-    color: #555;
-    margin-bottom: var(--spacing-lg);
+    color: var(--metal-silver-dark);
+    margin-bottom: var(--spacing-md);
     transition: all 0.2s ease;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8));
 }
 
 .upload-zone:hover .upload-icon {
     color: var(--metal-silver);
+    transform: scale(1.05);
 }
 
 .upload-zone h2 {
-    font-family: var(--font-header);
-    font-size: 1.5rem;
-    font-weight: 500;
-    margin-bottom: var(--spacing-sm);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    font-size: 1.25rem;
     color: var(--text-on-leather);
+    margin-bottom: var(--spacing-xs);
 }
 
 .upload-zone p {
     color: var(--text-muted);
-    font-family: var(--font-body);
-    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0;
 }
 
 /* ===================================
