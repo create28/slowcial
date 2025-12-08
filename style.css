@@ -627,8 +627,8 @@ h6 {
     flex-direction: column;
     justify-content: flex-end;
     /* Align text to bottom */
-    padding: var(--spacing-lg);
-    /* Increased padding */
+    padding: var(--spacing-xl);
+    /* Increased to 2rem */
     pointer-events: none;
     /* Let clicks pass through to container */
 }
@@ -645,8 +645,9 @@ h6 {
 
 /* Better spacing for wide items */
 .grid-item.wide .item-overlay {
-    padding-left: var(--spacing-xl);
-    padding-right: var(--spacing-xl);
+    padding-left: var(--spacing-2xl);
+    /* Increased to 3rem */
+    padding-right: var(--spacing-2xl);
 }
 
 .item-actions button {
