@@ -538,7 +538,7 @@ h6 {
 }
 
 .photo-grid.feed-layout .item-username {
-    color: var(--text-on-silver);
+    color: var(--text-on-leather);
     font-weight: 700;
     font-size: 1.1rem;
 }
@@ -620,18 +620,33 @@ h6 {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 40%, transparent 100%);
     opacity: 0;
     transition: opacity var(--transition-base);
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
     justify-content: flex-end;
-    padding: var(--spacing-md);
+    /* Align text to bottom */
+    padding: var(--spacing-lg);
+    /* Increased padding */
+    pointer-events: none;
+    /* Let clicks pass through to container */
 }
 
+/* Ensure actions (Edit/Delete) are clickable and positioned top-right */
 .item-actions {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
     display: flex;
     gap: var(--spacing-sm);
+    pointer-events: auto;
+}
+
+/* Better spacing for wide items */
+.grid-item.wide .item-overlay {
+    padding-left: var(--spacing-xl);
+    padding-right: var(--spacing-xl);
 }
 
 .item-actions button {
@@ -771,27 +786,36 @@ h6 {
 /* ===================================
    Grid Item Caption
    =================================== */
+/* ===================================
+   Grid Item Caption & Metadata
+   =================================== */
 .grid-caption {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding: var(--spacing-md);
+    position: relative;
+    /* Changed from absolute */
+    transform: none;
+    /* Removed transform animation */
+    padding: 0;
+    /* Padding handled by overlay */
+    margin-bottom: var(--spacing-xs);
     color: white;
-    font-size: var(--font-size-sm);
-    z-index: 2;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all var(--transition-base);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    font-size: 1rem;
+    font-weight: 500;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    opacity: 1;
+    /* Always visible if overlay is visible */
+    white-space: normal;
+    /* Allow wrapping */
+}
+
+.grid-metadata-badge {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
 }
 
 .grid-item:hover .grid-caption {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
 }
 
 /* ===================================
@@ -1012,7 +1036,7 @@ h6 {
 .modal-close {
     background: none;
     border: none;
-    color: #555;
+    color: #fff;
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0;
@@ -1021,7 +1045,7 @@ h6 {
 }
 
 .modal-close:hover {
-    color: #000;
+    color: #fff;
 }
 
 .modal-body {
